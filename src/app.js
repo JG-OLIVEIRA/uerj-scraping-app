@@ -82,7 +82,6 @@ function parseTurma(turmaStr) {
 async function scrapeDisciplinas(matricula, senha) {
     const browser = await puppeteer.launch({
         headless: true,
-        executablePath: process.env.CHROME_PATH || '/opt/render/.cache/puppeteer/chrome/linux-139.0.7258.154/chrome-linux64/chrome',
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",

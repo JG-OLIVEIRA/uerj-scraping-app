@@ -4,12 +4,15 @@
   "version": "0.0.0",
   "private": true,
   "scripts": {
-    "start": "node ./src/app.js"
+    "start": "node ./src/app.js",
+    "postinstall": "npx puppeteer browsers install chrome"
   },
   "dependencies": {
     "dotenv": "^10.0.0",
     "express": "^5.1.0",
-    "mongodb": "^6.19.0",
     "puppeteer": "^24.17.1"
+  },
+  "puppeteer": {
+    "cacheDirectory": ".cache/puppeteer"
   }
 }
