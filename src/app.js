@@ -1,8 +1,47 @@
-import puppeteer from 'puppeteer';
+import puppeteer from 'puppeteer'
 import express from 'express'
+import { MongoClient } from "mongodb"
+
 import 'dotenv/config'
 
-const app = express()
+const app = express();
+
+const dbName = "uerjScrapingDatabase";
+const collectionName = "disciplinas";
+
+const client = new MongoClient(process.env.URL_MONGODB);
+
+async function insertDisciplinas(disciplinas) {
+    await client.connect();
+
+    const database = client.db(dbName);
+    const collection = database.collection(collectionName);
+
+    try {
+        const insertManyResult = await collection.insertMany(disciplinas);
+        console.log(`${insertManyResult.insertedCount} documents successfully inserted.\n`);
+    } catch (err) {
+        console.error(`Something went wrong trying to insert the new documents: ${err}\n`);
+    } finally {
+        await client.close();
+    }
+}
+
+async function getAllDisciplinas() {
+    await client.connect();
+
+    const database = client.db(dbName);
+    const collection = database.collection(collectionName);
+
+    try {
+        const disciplinas = await collection.find({}).toArray();
+        return disciplinas;
+    } catch (err) {
+        console.error(`Something went wrong trying to get the documents: ${err}\n`);
+    } finally {
+        await client.close();
+    }
+}
 
 function parseTurma(turmaStr) {
     const turmaObj = {};
@@ -143,8 +182,14 @@ async function scrapeDisciplinas(matricula, senha) {
 }
 
 app.get('/disciplinas', async (req, res) => {
-  const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
+  const disciplinas = getAllDisciplinas();
   res.send(disciplinas);
+});
+
+app.post('/disciplinas', async (req, res) => {
+  const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
+  insertDisciplinas(disciplinas);
+  res.send({ message: disciplinas.length + " disciplinas inseridas no banco de dados." });
 });
 
 app.listen(process.env.PORT || 3000);
