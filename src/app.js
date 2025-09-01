@@ -92,6 +92,7 @@ async function scrapeDisciplinas(matricula, senha) {
     });
 
     const page = await browser.newPage();
+    page.setDefaultTimeout(60000);
 
     await page.goto('https://www.alunoonline.uerj.br', { waitUntil: 'networkidle2' });
 
