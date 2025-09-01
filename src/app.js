@@ -1,4 +1,5 @@
-import puppeteer from 'puppeteer'
+import puppeteer from 'puppeteer-core';
+import chromium from '@sparticuz/chromium';
 import express from 'express'
 import { MongoClient } from "mongodb"
 
@@ -81,25 +82,22 @@ function parseTurma(turmaStr) {
 
 async function scrapeDisciplinas(matricula, senha) {
     const browser = await puppeteer.launch({
-        headless: true,
-        args: [
-            "--no-sandbox",
-            "--disable-setuid-sandbox",
-            "--disable-dev-shm-usage",
-            "--disable-gpu",
-            "--disable-software-rasterizer"
-        ] 
+        args: chromium.args,
+        defaultViewport: chromium.defaultViewport,
+        executablePath: await chromium.executablePath(),
+        headless: chromium.headless,
     });
 
     const page = await browser.newPage();
     page.setDefaultTimeout(60000);
 
-    await page.goto('https://www.alunoonline.uerj.br', { waitUntil: 'networkidle2' });
+    await page.goto('https://www.alunoonline.uerj.br', { waitUntil: 'domcontentloaded' });
 
     await page.type('#matricula', matricula);
     await page.type('#senha', senha);
     await page.click('#confirmar');
-    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    
+    await page.waitForSelector('a.LINKNAOSUB');
 
     await page.evaluate(() => {
         console.log('Logged in, navigating to Disciplinas do Currículo...');
@@ -214,7 +212,7 @@ async function scrapeDisciplinas(matricula, senha) {
 
         console.log(`Extracted ${turmasParsed.length} turmas for disciplina ${disciplina.name}`);
 
-        await page.goBack({ waitUntil: 'networkidle2' });
+        await page.goBack({ waitUntil: 'domcontentloaded' });
         await page.waitForSelector('tbody');
     }
 
