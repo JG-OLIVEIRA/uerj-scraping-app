@@ -147,7 +147,7 @@ async function scrapeDisciplinas(matricula, senha) {
             consultarDisciplina(output, id);
         }, disciplina.discipline_id);
 
-        await page.waitForSelector('.divContentBlockHeader', { timeout: 5000 });
+        await page.waitForSelector('.divContentBlockHeader', { timeout: 6000 });
 
         const requisitos = await page.evaluate(() => {
         const bloco = Array.from(document.querySelectorAll('.divContentBlock'))
