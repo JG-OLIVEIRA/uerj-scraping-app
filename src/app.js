@@ -228,4 +228,9 @@ app.get('/disciplinas', async (req, res) => {
   res.send(disciplinas);
 });
 
+app.post('/disciplinas', async (req, res) => {
+  const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
+  res.send({'Disciplinas atualizadas': disciplinas});
+});
+
 app.listen(process.env.PORT || 3000);
