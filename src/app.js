@@ -82,6 +82,7 @@ function parseTurma(turmaStr) {
 async function scrapeDisciplinas(matricula, senha) {
     const browser = await puppeteer.launch({
         headless: true,
+        executablePath: process.env.CHROME_PATH || '/usr/bin/google-chrome',
         args: [
             "--no-sandbox",
             "--disable-setuid-sandbox",
@@ -90,7 +91,7 @@ async function scrapeDisciplinas(matricula, senha) {
             "--disable-software-rasterizer"
         ] 
     });
-    
+
     const page = await browser.newPage();
 
     await page.goto('https://www.alunoonline.uerj.br', { waitUntil: 'networkidle2' });
