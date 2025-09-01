@@ -7,9 +7,10 @@
     "start": "node ./src/app.js"
   },
   "dependencies": {
-    "dotenv": "^10.0.0",
+    "@sparticuz/chromium": "^138.0.2",
+    "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "mongodb": "^6.19.0",
-    "puppeteer": "^24.17.1"
+    "puppeteer-core": "^24.17.1"
   }
 }
