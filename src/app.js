@@ -140,6 +140,37 @@ async function scrapeDisciplinas(matricula, senha) {
 
         await page.waitForSelector('.divContentBlockHeader', { timeout: 5000 });
 
+        const requisitos = await page.evaluate(() => {
+        const bloco = Array.from(document.querySelectorAll('.divContentBlock'))
+            .find(el => el.querySelector('.divContentBlockHeader')?.innerText.includes('Requisitos da Disciplina'));
+
+        if (!bloco) return [];
+
+        const body = bloco.querySelector('.divContentBlockBody');
+        if (!body) return [];
+
+        if (body.innerText.includes('Esta Disciplina não possui requisito para inscrição.')) {
+            return [];
+        }
+
+        const requisitos = [];
+        const linhas = body.querySelectorAll('div[style*="margin-bottom"]');
+        if (linhas.length > 0) {
+            linhas.forEach(linha => {
+                const tipo = linha.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
+                const desc = linha.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || '';
+                requisitos.push({ tipo, descricao: desc });
+            });
+        } else {
+            const tipo = body.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
+            const desc = body.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || body.innerText.trim();
+            requisitos.push({ tipo, descricao: desc });
+        }
+            return requisitos;
+        });
+
+        disciplina.requisitos = requisitos;
+
         const turmasRaw = await page.evaluate(() => {
             const turmas = [];
             const turmaBlocks = Array.from(document.querySelectorAll('.divContentBlockHeader'))
