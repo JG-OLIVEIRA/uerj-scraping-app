@@ -7,7 +7,7 @@ import 'dotenv/config';
 const app = express();
 
 const dbName = "uerjScrapingDatabase";
-const collectionName = "disciplinas";
+const collectionName = "disciplines";
 
 const client = new MongoClient(process.env.URL_MONGODB);
 let collection; // collection global
