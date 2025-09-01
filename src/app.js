@@ -20,22 +20,54 @@ async function initMongo() {
     console.log("✅ MongoDB conectado");
 }
 
-// Funções de DB usando a conexão global
-async function insertDisciplina(disciplina) {
+// Upsert refinado: atualiza só campos que mudaram
+async function upsertDisciplinaRefinada(disciplina) {
     try {
-        await collection.insertOne(disciplina);
-        console.log(`${disciplina.name} successfully inserted.\n`);
+        const existing = await collection.findOne({ discipline_id: disciplina.discipline_id });
+
+        if (existing) {
+            const updates = {};
+            for (const key in disciplina) {
+                if (JSON.stringify(disciplina[key]) !== JSON.stringify(existing[key])) {
+                    updates[key] = disciplina[key];
+                }
+            }
+
+            if (Object.keys(updates).length > 0) {
+                await collection.updateOne(
+                    { discipline_id: disciplina.discipline_id },
+                    { $set: updates }
+                );
+                console.log(`${disciplina.name} atualizada com campos modificados:`, Object.keys(updates));
+            } else {
+                console.log(`${disciplina.name} não teve alterações.`);
+            }
+        } else {
+            await collection.insertOne(disciplina);
+            console.log(`${disciplina.name} inserida.`);
+        }
     } catch (err) {
-        console.error(`Erro ao inserir disciplina: ${err}\n`);
+        console.error(`Erro ao inserir/atualizar disciplina: ${err}`);
     }
 }
 
+// Buscar todas as disciplinas
 async function getAllDisciplinas() {
     try {
         return await collection.find({}).toArray();
     } catch (err) {
         console.error(`Erro ao buscar disciplinas: ${err}\n`);
         return [];
+    }
+}
+
+// Buscar disciplina por id
+async function getDisciplinaById(id) {
+    try {
+        return await collection.findOne({ discipline_id: id });
+    } catch (err) {
+        console.error(`Erro ao buscar disciplina ${id}: ${err}\n`);
+        return null;
     }
 }
 
@@ -190,7 +222,8 @@ async function scrapeDisciplinas(matricula, senha) {
         disciplina.turmas = turmasRaw.map(parseTurma);
 
         console.log(`Extracted ${disciplina.turmas.length} turmas for disciplina ${disciplina.name}`);
-        await insertDisciplina(disciplina);
+
+        await upsertDisciplinaRefinada(disciplina);
 
         await page.goBack({ waitUntil: 'domcontentloaded' });
         await page.waitForSelector('tbody');
@@ -202,12 +235,25 @@ async function scrapeDisciplinas(matricula, senha) {
 }
 
 // Endpoints Express
-app.get('/disciplinas', async (req, res) => {
+
+// GET todas as disciplinas
+app.get('/disciplines', async (req, res) => {
     const disciplinas = await getAllDisciplinas();
     res.send(disciplinas);
 });
 
-app.post('/disciplinas', async (req, res) => {
+// GET disciplina específica por ID
+app.get('/disciplines/:id', async (req, res) => {
+    const disciplina = await getDisciplinaById(req.params.id);
+    if (disciplina) {
+        res.send(disciplina);
+    } else {
+        res.status(404).send({ error: 'Disciplina não encontrada' });
+    }
+});
+
+// POST para atualizar/disparar scraping
+app.post('/disciplines', async (req, res) => {
     const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
     res.send({ 'Disciplinas atualizadas': disciplinas });
 });
