@@ -12,17 +12,17 @@ const collectionName = "disciplinas";
 
 const client = new MongoClient(process.env.URL_MONGODB);
 
-async function insertDisciplinas(disciplinas) {
+async function insertDisciplina(disciplina) {
     await client.connect();
 
     const database = client.db(dbName);
     const collection = database.collection(collectionName);
 
     try {
-        const insertManyResult = await collection.insertMany(disciplinas);
-        console.log(`${insertManyResult.insertedCount} documents successfully inserted.\n`);
+        await collection.insertOne(disciplina);
+        console.log(`${disciplina.name} successfully inserted.\n`);
     } catch (err) {
-        console.error(`Something went wrong trying to insert the new documents: ${err}\n`);
+        console.error(`Something went wrong trying to insert the new document: ${err}\n`);
     } finally {
         await client.close();
     }
@@ -147,6 +147,8 @@ async function scrapeDisciplinas(matricula, senha) {
             consultarDisciplina(output, id);
         }, disciplina.discipline_id);
 
+        await page.waitForSelector('.divContentBlockHeader', { timeout: 8000 });
+
         const requisitos = await page.evaluate(() => {
         const bloco = Array.from(document.querySelectorAll('.divContentBlock'))
             .find(el => el.querySelector('.divContentBlockHeader')?.innerText.includes('Requisitos da Disciplina'));
@@ -209,6 +211,8 @@ async function scrapeDisciplinas(matricula, senha) {
         disciplina.turmas = turmasParsed;
 
         console.log(`Extracted ${turmasParsed.length} turmas for disciplina ${disciplina.name}`);
+        
+        await insertDisciplina(disciplina);
 
         await page.goBack({ waitUntil: 'domcontentloaded' });
         await page.waitForSelector('tbody');
@@ -222,12 +226,6 @@ async function scrapeDisciplinas(matricula, senha) {
 app.get('/disciplinas', async (req, res) => {
   const disciplinas = getAllDisciplinas();
   res.send(disciplinas);
-});
-
-app.post('/disciplinas', async (req, res) => {
-  const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
-  insertDisciplinas(disciplinas);
-  res.send({ message: disciplinas.length + " disciplinas inseridas no banco de dados." });
 });
 
 app.listen(process.env.PORT || 3000);
