@@ -1,9 +1,8 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
-import express from 'express'
-import { MongoClient } from "mongodb"
-
-import 'dotenv/config'
+import express from 'express';
+import { MongoClient } from "mongodb";
+import 'dotenv/config';
 
 const app = express();
 
@@ -11,39 +10,36 @@ const dbName = "uerjScrapingDatabase";
 const collectionName = "disciplinas";
 
 const client = new MongoClient(process.env.URL_MONGODB);
+let collection; // collection global
 
-async function insertDisciplina(disciplina) {
+// Inicializa MongoDB no startup
+async function initMongo() {
     await client.connect();
+    const db = client.db(dbName);
+    collection = db.collection(collectionName);
+    console.log("✅ MongoDB conectado");
+}
 
-    const database = client.db(dbName);
-    const collection = database.collection(collectionName);
-
+// Funções de DB usando a conexão global
+async function insertDisciplina(disciplina) {
     try {
         await collection.insertOne(disciplina);
         console.log(`${disciplina.name} successfully inserted.\n`);
     } catch (err) {
-        console.error(`Something went wrong trying to insert the new document: ${err}\n`);
-    } finally {
-        await client.close();
+        console.error(`Erro ao inserir disciplina: ${err}\n`);
     }
 }
 
 async function getAllDisciplinas() {
-    await client.connect();
-
-    const database = client.db(dbName);
-    const collection = database.collection(collectionName);
-
     try {
-        const disciplinas = await collection.find({}).toArray();
-        return disciplinas;
+        return await collection.find({}).toArray();
     } catch (err) {
-        console.error(`Something went wrong trying to get the documents: ${err}\n`);
-    } finally {
-        await client.close();
+        console.error(`Erro ao buscar disciplinas: ${err}\n`);
+        return [];
     }
 }
 
+// Função que parseia informações de turma
 function parseTurma(turmaStr) {
     const turmaObj = {};
 
@@ -80,6 +76,7 @@ function parseTurma(turmaStr) {
     return turmaObj;
 }
 
+// Função de scraping
 async function scrapeDisciplinas(matricula, senha) {
     const browser = await puppeteer.launch({
         args: chromium.args,
@@ -138,48 +135,39 @@ async function scrapeDisciplinas(matricula, senha) {
     console.log(`Found ${disciplinas.length} disciplinas.`);
 
     for (const disciplina of disciplinas) {
+        if (!disciplina.discipline_id) continue;
 
-        if (!disciplina.discipline_id){
-            continue;
-        } 
-
-        await page.evaluate((id) => {
-            consultarDisciplina(output, id);
-        }, disciplina.discipline_id);
-
+        await page.evaluate((id) => { consultarDisciplina(output, id); }, disciplina.discipline_id);
         await page.waitForSelector('.divContentBlockHeader', { timeout: 8000 });
 
+        // Requisitos
         const requisitos = await page.evaluate(() => {
-        const bloco = Array.from(document.querySelectorAll('.divContentBlock'))
-            .find(el => el.querySelector('.divContentBlockHeader')?.innerText.includes('Requisitos da Disciplina'));
+            const bloco = Array.from(document.querySelectorAll('.divContentBlock'))
+                .find(el => el.querySelector('.divContentBlockHeader')?.innerText.includes('Requisitos da Disciplina'));
+            if (!bloco) return [];
+            const body = bloco.querySelector('.divContentBlockBody');
+            if (!body) return [];
+            if (body.innerText.includes('Esta Disciplina não possui requisito para inscrição.')) return [];
 
-        if (!bloco) return [];
-
-        const body = bloco.querySelector('.divContentBlockBody');
-        if (!body) return [];
-
-        if (body.innerText.includes('Esta Disciplina não possui requisito para inscrição.')) {
-            return [];
-        }
-
-        const requisitos = [];
-        const linhas = body.querySelectorAll('div[style*="margin-bottom"]');
-        if (linhas.length > 0) {
-            linhas.forEach(linha => {
-                const tipo = linha.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
-                const desc = linha.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || '';
+            const requisitos = [];
+            const linhas = body.querySelectorAll('div[style*="margin-bottom"]');
+            if (linhas.length > 0) {
+                linhas.forEach(linha => {
+                    const tipo = linha.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
+                    const desc = linha.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || '';
+                    requisitos.push({ tipo, descricao: desc });
+                });
+            } else {
+                const tipo = body.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
+                const desc = body.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || body.innerText.trim();
                 requisitos.push({ tipo, descricao: desc });
-            });
-        } else {
-            const tipo = body.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
-            const desc = body.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || body.innerText.trim();
-            requisitos.push({ tipo, descricao: desc });
-        }
+            }
             return requisitos;
         });
 
         disciplina.requisitos = requisitos;
 
+        // Turmas
         const turmasRaw = await page.evaluate(() => {
             const turmas = [];
             const turmaBlocks = Array.from(document.querySelectorAll('.divContentBlockHeader'))
@@ -194,24 +182,14 @@ async function scrapeDisciplinas(matricula, senha) {
                 const turmaTd = row.querySelector('td');
                 if (turmaTd) {
                     const turmaDiv = turmaTd.querySelector('div');
-                    if (turmaDiv) {
-                        const turmaInfo = turmaDiv.innerText.replace(/\s+/g, ' ').trim();
-                        turmas.push(turmaInfo);
-                    }
+                    if (turmaDiv) turmas.push(turmaDiv.innerText.replace(/\s+/g, ' ').trim());
                 }
             });
-
             return turmas;
         });
+        disciplina.turmas = turmasRaw.map(parseTurma);
 
-        const turmasParsed = turmasRaw.map(turmaStr => {
-            return parseTurma(turmaStr);
-        });
-
-        disciplina.turmas = turmasParsed;
-
-        console.log(`Extracted ${turmasParsed.length} turmas for disciplina ${disciplina.name}`);
-        
+        console.log(`Extracted ${disciplina.turmas.length} turmas for disciplina ${disciplina.name}`);
         await insertDisciplina(disciplina);
 
         await page.goBack({ waitUntil: 'domcontentloaded' });
@@ -223,14 +201,22 @@ async function scrapeDisciplinas(matricula, senha) {
     return disciplinas;
 }
 
+// Endpoints Express
 app.get('/disciplinas', async (req, res) => {
-  const disciplinas = getAllDisciplinas();
-  res.send(disciplinas);
+    const disciplinas = await getAllDisciplinas();
+    res.send(disciplinas);
 });
 
 app.post('/disciplinas', async (req, res) => {
-  const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
-  res.send({'Disciplinas atualizadas': disciplinas});
+    const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
+    res.send({ 'Disciplinas atualizadas': disciplinas });
 });
 
-app.listen(process.env.PORT || 3000);
+// Inicia o servidor só depois de conectar no Mongo
+initMongo().then(() => {
+    app.listen(process.env.PORT || 3000, () => {
+        console.log("🚀 Server rodando");
+    });
+}).catch(err => {
+    console.error("❌ Falha ao conectar no MongoDB:", err);
+});
