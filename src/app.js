@@ -10,9 +10,8 @@ const dbName = "uerjScrapingDatabase";
 const collectionName = "disciplines";
 
 const client = new MongoClient(process.env.URL_MONGODB);
-let collection; // collection global
+let collection;
 
-// Inicializa MongoDB no startup
 async function initMongo() {
     await client.connect();
     const db = client.db(dbName);
@@ -20,39 +19,37 @@ async function initMongo() {
     console.log("✅ MongoDB conectado");
 }
 
-// Upsert refinado: atualiza só campos que mudaram
-async function upsertDisciplinaRefinada(disciplina) {
+async function upsertDiscipline(discipline) {
     try {
-        const existing = await collection.findOne({ discipline_id: disciplina.discipline_id });
+        const existing = await collection.findOne({ discipline_id: discipline.discipline_id });
 
         if (existing) {
             const updates = {};
-            for (const key in disciplina) {
-                if (JSON.stringify(disciplina[key]) !== JSON.stringify(existing[key])) {
-                    updates[key] = disciplina[key];
+            for (const key in discipline) {
+                if (JSON.stringify(discipline[key]) !== JSON.stringify(existing[key])) {
+                    updates[key] = discipline[key];
                 }
             }
 
             if (Object.keys(updates).length > 0) {
                 await collection.updateOne(
-                    { discipline_id: disciplina.discipline_id },
+                    { discipline_id: discipline.discipline_id },
                     { $set: updates }
                 );
-                console.log(`${disciplina.name} atualizada com campos modificados:`, Object.keys(updates));
+                console.log(`${discipline.name} atualizada com campos modificados:`, Object.keys(updates));
             } else {
-                console.log(`${disciplina.name} não teve alterações.`);
+                console.log(`${discipline.name} não teve alterações.`);
             }
         } else {
-            await collection.insertOne(disciplina);
-            console.log(`${disciplina.name} inserida.`);
+            await collection.insertOne(discipline);
+            console.log(`${discipline.name} inserida.`);
         }
     } catch (err) {
         console.error(`Erro ao inserir/atualizar disciplina: ${err}`);
     }
 }
 
-// Buscar todas as disciplinas
-async function getAllDisciplinas() {
+async function getAllDisciplines() {
     try {
         return await collection.find({}).toArray();
     } catch (err) {
@@ -61,8 +58,7 @@ async function getAllDisciplinas() {
     }
 }
 
-// Buscar disciplina por id
-async function getDisciplinaById(id) {
+async function getDisciplineById(id) {
     try {
         return await collection.findOne({ discipline_id: id });
     } catch (err) {
@@ -71,41 +67,40 @@ async function getDisciplinaById(id) {
     }
 }
 
-// Função que parseia informações de turma
-function parseTurma(turmaStr) {
-    const turmaObj = {};
+function parseClass(classStr) {
+    const classObj = {};
 
-    const turmaMatch = turmaStr.match(/TURMA:\s*(\d+)/);
-    turmaObj.number = turmaMatch ? turmaMatch[1] : null;
+    const classMatch = classStr.match(/TURMA:\s*(\d+)/);
+    classObj.number = classMatch ? classMatch[1] : null;
 
-    const prefMatch = turmaStr.match(/Preferencial:\s*(SIM|NÃO)/);
-    turmaObj.preferential = prefMatch ? prefMatch[1] : null;
+    const prefMatch = classStr.match(/Preferencial:\s*(SIM|NÃO)/);
+    classObj.preferential = prefMatch ? prefMatch[1] : null;
 
-    const temposMatch = turmaStr.match(/Tempos:\s*([A-ZÁÉÍÓÚÃÕÇ0-9\s\w\.\-]+?)(?=Local das Aulas:|Docente:)/);
-    turmaObj.times = temposMatch ? temposMatch[1].trim() : null;
+    const temposMatch = classStr.match(/Tempos:\s*([A-ZÁÉÍÓÚÃÕÇ0-9\s\w\.\-]+?)(?=Local das Aulas:|Docente:)/);
+    classObj.times = temposMatch ? temposMatch[1].trim() : null;
 
-    const docenteMatch = turmaStr.match(/Docente:\s*([A-ZÁÉÍÓÚÃÕÇ\s\w\.\-]+)/i);
-    turmaObj.teacher = docenteMatch ? docenteMatch[1].trim().replace(/ Vagas.*$/, '') : null;
+    const teacherMatch = classStr.match(/Docente:\s*([A-ZÁÉÍÓÚÃÕÇ\s\w\.\-]+)/i);
+    classObj.teacher = teacherMatch ? teacherMatch[1].trim().replace(/ Vagas.*$/, '') : null;
 
-    const vagasMatch = turmaStr.match(/Vagas Atualizadas da Turma.*?UERJ\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)/s);
+    const vagasMatch = classStr.match(/Vagas Atualizadas da Turma.*?UERJ\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)/s);
     if (vagasMatch) {
-        turmaObj.offered_uerj = vagasMatch[1];
-        turmaObj.occupied_uerj = vagasMatch[2];
-        turmaObj.offered_vestibular = vagasMatch[3];
-        turmaObj.occupied_vestibular = vagasMatch[4];
+        classObj.offered_uerj = vagasMatch[1];
+        classObj.occupied_uerj = vagasMatch[2];
+        classObj.offered_vestibular = vagasMatch[3];
+        classObj.occupied_vestibular = vagasMatch[4];
     }
 
-    const solMatch = turmaStr.match(/Vagas para Solicitação de Inscrição.*?UERJ\s*(\d+)\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)\s*(\d+)/s);
+    const solMatch = classStr.match(/Vagas para Solicitação de Inscrição.*?UERJ\s*(\d+)\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)\s*(\d+)/s);
     if (solMatch) {
-        turmaObj.request_uerj_offered = solMatch[1];
-        turmaObj.request_uerj_total = solMatch[2];
-        turmaObj.request_uerj_preferential = solMatch[3];
-        turmaObj.request_vestibular_offered = solMatch[4];
-        turmaObj.request_vestibular_total = solMatch[5];
-        turmaObj.request_vestibular_preferential = solMatch[6];
+        classObj.request_uerj_offered = solMatch[1];
+        classObj.request_uerj_total = solMatch[2];
+        classObj.request_uerj_preferential = solMatch[3];
+        classObj.request_vestibular_offered = solMatch[4];
+        classObj.request_vestibular_total = solMatch[5];
+        classObj.request_vestibular_preferential = solMatch[6];
     }
 
-    return turmaObj;
+    return classObj;
 }
 
 // Função de scraping
@@ -125,7 +120,7 @@ async function scrapeDisciplinas(matricula, senha) {
     await page.type('#matricula', matricula);
     await page.type('#senha', senha);
     await page.click('#confirmar');
-    
+
     await page.waitForSelector('a.LINKNAOSUB');
 
     await page.evaluate(() => {
@@ -137,7 +132,7 @@ async function scrapeDisciplinas(matricula, senha) {
 
     await page.waitForSelector('tbody');
 
-    const disciplinas = await page.evaluate(() => {
+    const disciplines = await page.evaluate(() => {
         const rows = Array.from(document.querySelectorAll('tbody tr'));
         return rows
             .filter(row => row.querySelectorAll('th').length === 0 && row.querySelectorAll('td').length >= 9)
@@ -164,66 +159,68 @@ async function scrapeDisciplinas(matricula, senha) {
             });
     });
 
-    console.log(`Found ${disciplinas.length} disciplinas.`);
+    console.log(`Found ${disciplines.length} disciplinas.`);
 
-    for (const disciplina of disciplinas) {
-        if (!disciplina.discipline_id) continue;
+    for (const discipline of disciplines) {
+        if (!discipline.discipline_id) continue;
 
-        await page.evaluate((id) => { consultarDisciplina(output, id); }, disciplina.discipline_id);
+        await page.evaluate((id) => { consultarDisciplina(output, id); }, discipline.discipline_id);
         await page.waitForSelector('.divContentBlockHeader', { timeout: 8000 });
 
-        // Requisitos
-        const requisitos = await page.evaluate(() => {
-            const bloco = Array.from(document.querySelectorAll('.divContentBlock'))
+
+        const requirements = await page.evaluate(() => {
+            const block = Array.from(document.querySelectorAll('.divContentBlock'))
                 .find(el => el.querySelector('.divContentBlockHeader')?.innerText.includes('Requisitos da Disciplina'));
-            if (!bloco) return [];
-            const body = bloco.querySelector('.divContentBlockBody');
+            if (!block) return [];
+            const body = block.querySelector('.divContentBlockBody');
             if (!body) return [];
             if (body.innerText.includes('Esta Disciplina não possui requisito para inscrição.')) return [];
 
-            const requisitos = [];
-            const linhas = body.querySelectorAll('div[style*="margin-bottom"]');
-            if (linhas.length > 0) {
-                linhas.forEach(linha => {
-                    const tipo = linha.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
-                    const desc = linha.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || '';
-                    requisitos.push({ tipo, descricao: desc });
+            const requirements = [];
+            const lines = body.querySelectorAll('div[style*="margin-bottom"]');
+            if (lines.length > 0) {
+                lines.forEach(line => {
+                    const type = line.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
+                    const desc = line.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || '';
+                    requirements.push({ type, description: desc });
                 });
             } else {
-                const tipo = body.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
-                const desc = body.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || body.innerText.trim();
-                requisitos.push({ tipo, descricao: desc });
+                const type = body.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
+                const description = body.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || body.innerText.trim();
+                requirements.push({ type, description });
             }
-            return requisitos;
+            return requirements;
         });
 
-        disciplina.requisitos = requisitos;
+        discipline.requirements = requirements;
 
-        // Turmas
-        const turmasRaw = await page.evaluate(() => {
-            const turmas = [];
-            const turmaBlocks = Array.from(document.querySelectorAll('.divContentBlockHeader'))
+        console.log(`Extracted ${discipline.requirements.length} requirements for disciplina ${discipline.name}`);
+
+        const classesRaw = await page.evaluate(() => {
+            const classes = [];
+            const classBlocks = Array.from(document.querySelectorAll('.divContentBlockHeader'))
                 .filter(el => el.textContent.includes('Turmas da Disciplina') || el.textContent.includes('Turma da Disciplina'));
-            if (turmaBlocks.length === 0) return turmas;
+            if (classBlocks.length === 0) return classes;
 
-            const turmaTable = turmaBlocks[0].parentElement.querySelector('table');
-            if (!turmaTable) return turmas;
+            const classTable = classBlocks[0].parentElement.querySelector('table');
+            if (!classTable) return classes;
 
-            const turmaRows = Array.from(turmaTable.querySelectorAll('tr'));
-            turmaRows.forEach(row => {
-                const turmaTd = row.querySelector('td');
-                if (turmaTd) {
-                    const turmaDiv = turmaTd.querySelector('div');
-                    if (turmaDiv) turmas.push(turmaDiv.innerText.replace(/\s+/g, ' ').trim());
+            const classRows = Array.from(classTable.querySelectorAll('tr'));
+            classRows.forEach(row => {
+                const classTd = row.querySelector('td');
+                if (classTd) {
+                    const classDiv = classTd.querySelector('div');
+                    if (classDiv) classes.push(classDiv.innerText.replace(/\s+/g, ' ').trim());
                 }
             });
-            return turmas;
+            return classes;
         });
-        disciplina.turmas = turmasRaw.map(parseTurma);
 
-        console.log(`Extracted ${disciplina.turmas.length} turmas for disciplina ${disciplina.name}`);
+        discipline.classes = classesRaw.map(parseClass);
 
-        await upsertDisciplinaRefinada(disciplina);
+        console.log(`Extracted ${discipline.classes.length} classes for disciplina ${discipline.name}`);
+
+        await upsertDiscipline(discipline);
 
         await page.goBack({ waitUntil: 'domcontentloaded' });
         await page.waitForSelector('tbody');
@@ -231,34 +228,37 @@ async function scrapeDisciplinas(matricula, senha) {
 
     await browser.close();
 
-    return disciplinas;
+    return disciplines;
 }
 
-// Endpoints Express
+app.use(express.json());
 
-// GET todas as disciplinas
 app.get('/disciplines', async (req, res) => {
-    const disciplinas = await getAllDisciplinas();
-    res.send(disciplinas);
+    const disciplines = await getAllDisciplines();
+    res.send(disciplines);
 });
 
-// GET disciplina específica por ID
 app.get('/disciplines/:id', async (req, res) => {
-    const disciplina = await getDisciplinaById(req.params.id);
-    if (disciplina) {
-        res.send(disciplina);
+    const discipline = await getDisciplineById(req.params.id);
+    if (discipline) {
+        res.send(discipline);
     } else {
         res.status(404).send({ error: 'Disciplina não encontrada' });
     }
 });
 
-// POST para atualizar/disparar scraping
 app.post('/disciplines', async (req, res) => {
-    const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
-    res.send({ 'Disciplinas atualizadas': disciplinas });
+    const { matricula, senha } = req.body;
+
+    if (!matricula || !senha) {
+        return res.status(400).send({ error: 'Matrícula e senha são obrigatórios' });
+    }
+
+    await scrapeDisciplinas(matricula, senha);
+
+    res.send({ status: 'Disciplinas atualizadas' });
 });
 
-// Inicia o servidor só depois de conectar no Mongo
 initMongo().then(() => {
     app.listen(process.env.PORT || 3000, () => {
         console.log("🚀 Server rodando");
