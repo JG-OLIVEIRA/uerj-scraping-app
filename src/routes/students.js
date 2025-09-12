@@ -1,7 +1,45 @@
 import express from 'express';
-import { createStudent, updateStudent } from '../db/mongo.js';
+import { createStudent, getStudentById, updateStudent } from '../db/mongo.js';
 
 const router = express.Router();
+
+/**
+ * @swagger
+ * /students/{studentId}:
+ *   get:
+ *     summary: Retorna um estudante pelo ID.
+ *     parameters:
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         description: ID do estudante a ser retornado.
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Estudante retornado com sucesso.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Student'
+ *       404:
+ *         description: Estudante não encontrado.
+ *       500:
+ *         description: Erro ao buscar o estudante.
+ */
+router.get('/:studentId', async (req, res) => {
+    const { studentId } = req.params;
+
+    try {
+        const student = await getStudentById(studentId);
+        if (!student) {
+            return res.status(404).send({ error: 'Estudante não encontrado' });
+        }
+        res.status(200).send(student);
+    } catch (error) {
+        res.status(500).send({ error: 'Erro ao buscar o estudante' });
+    }
+});
 
 /**
  * @swagger

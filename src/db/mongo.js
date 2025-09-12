@@ -81,6 +81,15 @@ async function createStudent({ studentId, disciplines }) {
     }
 }
 
+async function getStudentById(studentId) {
+    try {
+        return await studentsCollection.findOne({ studentId: studentId });
+    } catch (err) {
+        console.error(`Erro ao buscar estudante ${studentId}: ${err}\n`);
+        return null;
+    }
+}
+
 async function updateStudent({ studentId, add, remove }) {
     try {
         const update = {};
@@ -109,4 +118,4 @@ async function updateStudent({ studentId, add, remove }) {
 }
 
 
-export { initMongo, upsertDisciplinaRefinada, getAllDisciplinas, getDisciplinaById, createStudent, updateStudent };
+export { initMongo, upsertDisciplinaRefinada, getAllDisciplinas, getDisciplinaById, createStudent, getStudentById, updateStudent };
