@@ -1,6 +1,6 @@
 import express from 'express';
-import { getAllDisciplinas, getDisciplinaById } from '../db/mongo.js';
-import { scrapeDisciplinas } from '../scraping/scraper.js';
+import { getAllDisciplines, getDisciplineById } from '../db/mongo.js';
+import { scrapeDisciplines } from '../scraping/scraper.js';
 import 'dotenv/config';
 
 const router = express.Router();
@@ -9,10 +9,10 @@ const router = express.Router();
  * @swagger
  * /disciplines:
  *   get:
- *     summary: Retorna todas as disciplinas.
+ *     summary: Returns all disciplines.
  *     responses:
  *       200:
- *         description: Lista de todas as disciplinas.
+ *         description: A list of all disciplines.
  *         content:
  *           application/json:
  *             schema:
@@ -21,38 +21,38 @@ const router = express.Router();
  *                 $ref: '#/components/schemas/Discipline'
  */
 router.get('/', async (req, res) => {
-    const disciplinas = await getAllDisciplinas();
-    res.send(disciplinas);
+    const disciplines = await getAllDisciplines();
+    res.send(disciplines);
 });
 
 /**
  * @swagger
  * /disciplines/{id}:
  *   get:
- *     summary: Retorna uma disciplina pelo seu ID.
+ *     summary: Returns a discipline by its ID.
  *     parameters:
  *       - in: path
  *         name: id
  *         required: true
- *         description: ID da disciplina.
+ *         description: The ID of the discipline.
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: A disciplina correspondente ao ID.
+ *         description: The discipline corresponding to the ID.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Discipline'
  *       404:
- *         description: Disciplina não encontrada.
+ *         description: Discipline not found.
  */
 router.get('/:id', async (req, res) => {
-    const disciplina = await getDisciplinaById(req.params.id);
-    if (disciplina) {
-        res.send(disciplina);
+    const discipline = await getDisciplineById(req.params.id);
+    if (discipline) {
+        res.send(discipline);
     } else {
-        res.status(404).send({ error: 'Disciplina não encontrada' });
+        res.status(404).send({ error: 'Discipline not found' });
     }
 });
 
@@ -60,14 +60,14 @@ router.get('/:id', async (req, res) => {
  * @swagger
  * /disciplines:
  *   post:
- *     summary: Força a atualização das disciplinas no banco de dados, raspando os dados do Aluno Online.
+ *     summary: Forces an update of the disciplines in the database by scraping data from Aluno Online.
  *     responses:
  *       200:
- *         description: Disciplinas atualizadas com sucesso.
+ *         description: Disciplines updated successfully.
  */
 router.post('/', async (req, res) => {
-    const disciplinas = await scrapeDisciplinas(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
-    res.send({ 'Disciplinas atualizadas': disciplinas });
+    const disciplines = await scrapeDisciplines(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
+    res.send({ 'Disciplines updated': disciplines });
 });
 
 export default router;

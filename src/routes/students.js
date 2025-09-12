@@ -7,25 +7,25 @@ const router = express.Router();
  * @swagger
  * /students/{studentId}:
  *   get:
- *     summary: Retorna um estudante pelo ID.
+ *     summary: Returns a student by their ID.
  *     parameters:
  *       - in: path
  *         name: studentId
  *         required: true
- *         description: ID do estudante a ser retornado.
+ *         description: The ID of the student to be returned.
  *         schema:
  *           type: string
  *     responses:
  *       200:
- *         description: Estudante retornado com sucesso.
+ *         description: Student returned successfully.
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Student'
  *       404:
- *         description: Estudante não encontrado.
+ *         description: Student not found.
  *       500:
- *         description: Erro ao buscar o estudante.
+ *         description: Error retrieving the student.
  */
 router.get('/:studentId', async (req, res) => {
     const { studentId } = req.params;
@@ -33,11 +33,11 @@ router.get('/:studentId', async (req, res) => {
     try {
         const student = await getStudentById(studentId);
         if (!student) {
-            return res.status(404).send({ error: 'Estudante não encontrado' });
+            return res.status(404).send({ error: 'Student not found' });
         }
         res.status(200).send(student);
     } catch (error) {
-        res.status(500).send({ error: 'Erro ao buscar o estudante' });
+        res.status(500).send({ error: 'Error retrieving the student' });
     }
 });
 
@@ -45,7 +45,7 @@ router.get('/:studentId', async (req, res) => {
  * @swagger
  * /students:
  *   post:
- *     summary: Cria um novo estudante.
+ *     summary: Creates a new student.
  *     requestBody:
  *       required: true
  *       content:
@@ -54,24 +54,24 @@ router.get('/:studentId', async (req, res) => {
  *             $ref: '#/components/schemas/Student'
  *     responses:
  *       201:
- *         description: Estudante criado com sucesso.
+ *         description: Student created successfully.
  *       400:
- *         description: O ID do estudante é obrigatório.
+ *         description: The student ID is required.
  *       500:
- *         description: Erro ao criar o estudante.
+ *         description: Error creating the student.
  */
 router.post('/', async (req, res) => {
     const { studentId, disciplines } = req.body;
 
     if (!studentId) {
-        return res.status(400).send({ error: 'studentId é obrigatório' });
+        return res.status(400).send({ error: 'studentId is required' });
     }
 
     try {
         await createStudent({ studentId, disciplines });
-        res.status(201).send({ message: `Estudante ${studentId} criado com sucesso` });
+        res.status(201).send({ message: `Student ${studentId} created successfully` });
     } catch (error) {
-        res.status(500).send({ error: 'Erro ao criar estudante' });
+        res.status(500).send({ error: 'Error creating student' });
     }
 });
 
@@ -79,12 +79,12 @@ router.post('/', async (req, res) => {
  * @swagger
  * /students/{studentId}:
  *   put:
- *     summary: Adiciona ou remove disciplinas de um estudante.
+ *     summary: Adds or removes disciplines from a student.
  *     parameters:
  *       - in: path
  *         name: studentId
  *         required: true
- *         description: ID do estudante.
+ *         description: The student's ID.
  *         schema:
  *           type: string
  *     requestBody:
@@ -98,17 +98,17 @@ router.post('/', async (req, res) => {
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: Uma lista de IDs de disciplinas para adicionar.
+ *                 description: A list of discipline IDs to add.
  *               remove:
  *                 type: array
  *                 items:
  *                   type: string
- *                 description: Uma lista de IDs de disciplinas para remover.
+ *                 description: A list of discipline IDs to remove.
  *     responses:
  *       200:
- *         description: Estudante atualizado com sucesso.
+ *         description: Student updated successfully.
  *       500:
- *         description: Erro ao atualizar o estudante.
+ *         description: Error updating the student.
  */
 router.put('/:studentId', async (req, res) => {
     const { studentId } = req.params;
@@ -117,11 +117,11 @@ router.put('/:studentId', async (req, res) => {
     try {
         const result = await updateStudent({ studentId, add, remove });
         if (result.matchedCount === 0) {
-            return res.status(404).send({ error: 'Estudante não encontrado' });
+            return res.status(404).send({ error: 'Student not found' });
         }
-        res.status(200).send({ message: `Estudante ${studentId} atualizado com sucesso` });
+        res.status(200).send({ message: `Student ${studentId} updated successfully` });
     } catch (error) {
-        res.status(500).send({ error: 'Erro ao atualizar o estudante' });
+        res.status(500).send({ error: 'Error updating the student' });
     }
 });
 

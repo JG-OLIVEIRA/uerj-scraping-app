@@ -6,71 +6,84 @@ const options = {
         info: {
             title: 'UERJ Scraping API',
             version: '1.0.0',
-            description: 'API para raspar dados do Aluno Online da UERJ e armazená-los em um banco de dados MongoDB.',
         },
         components: {
             schemas: {
-                Discipline: {
-                    type: 'object',
-                    properties: {
-                        discipline_id: {
-                            type: 'string',
-                            description: 'O ID da disciplina.',
-                        },
-                        name: {
-                            type: 'string',
-                            description: 'O nome da disciplina.',
-                        },
-                        class_times: {
-                            type: 'array',
-                            items: {
-                                type: 'string',
-                            },
-                            description: 'Os horários das aulas.',
-                        },
-                        class_location: {
-                            type: 'string',
-                            description: 'O local da aula.',
-                        },
-                        teacher: {
-                            type: 'string',
-                            description: 'O nome do professor.',
-                        },
-                        description: {
-                            type: 'string',
-                            description: 'A descrição da disciplina.',
-                        },
-                        credits: {
-                            type: 'integer',
-                            description: 'O número de créditos da disciplina.',
-                        },
-                        last_update: {
-                            type: 'string',
-                            format: 'date-time',
-                            description: 'A data e hora da última atualização.',
-                        },
-                    },
-                },
                 Student: {
                     type: 'object',
                     properties: {
                         studentId: {
                             type: 'string',
-                            description: 'O ID do estudante.',
+                            description: "The student's ID.",
+                            example: '20201010101'
                         },
                         disciplines: {
                             type: 'array',
                             items: {
-                                type: 'string',
+                                type: 'string'
                             },
-                            description: 'Uma lista de IDs de disciplinas que o estudante já completou.',
-                        },
-                    },
+                            description: 'A list of discipline IDs that the student has completed.',
+                            example: ['DC001', 'DC002']
+                        }
+                    }
                 },
-            },
-        },
+                Discipline: {
+                    type: 'object',
+                    properties: {
+                        name: { type: 'string' },
+                        period: { type: 'string' },
+                        attended: { type: 'string' },
+                        type: { type: 'string' },
+                        ramification: { type: 'string' },
+                        credits: { type: 'string' },
+                        totalHours: { type: 'string' },
+                        creditLock: { type: 'string' },
+                        classInPeriod: { type: 'string' },
+                        disciplineId: { type: 'string' },
+                        requirements: {
+                            type: 'array',
+                            items: {
+                                $ref: '#/components/schemas/Requirement'
+                            }
+                        },
+                        classes: {
+                            type: 'array',
+                            items: {
+                                $ref: '#/components/schemas/Class'
+                            }
+                        }
+                    }
+                },
+                Requirement: {
+                    type: 'object',
+                    properties: {
+                        type: { type: 'string' },
+                        description: { type: 'string' }
+                    }
+                },
+                Class: {
+                    type: 'object',
+                    properties: {
+                        number: { type: 'string' },
+                        preferential: { type: 'string' },
+                        times: { type: 'string' },
+                        teacher: { type: 'string' },
+                        offeredUerj: { type: 'string' },
+                        occupiedUerj: { type: 'string' },
+                        offeredVestibular: { type: 'string' },
+                        occupiedVestibular: { type: 'string' },
+                        requestUerjOffered: { type: 'string' },
+                        requestUerjTotal: { type: 'string' },
+                        requestUerjPreferential: { type: 'string' },
+                        requestVestibularOffered: { type: 'string' },
+                        requestVestibularTotal: { type: 'string' },
+                        requestVestibularPreferential: { type: 'string' }
+                    }
+                }
+            }
+        }
     },
-    apis: ['./src/routes/*.js'], // Caminho para os arquivos que contêm as anotações da API
+    apis: ['./src/routes/*.js'],
 };
 
 const specs = swaggerJsdoc(options);

@@ -1,44 +1,44 @@
 import puppeteer from 'puppeteer-core';
 import chromium from '@sparticuz/chromium';
-import { upsertDisciplinaRefinada } from '../db/mongo.js';
+import { upsertDiscipline } from '../db/mongo.js';
 
-function parseTurma(turmaStr) {
-    const turmaObj = {};
+function parseClass(classStr) {
+    const classObj = {};
 
-    const turmaMatch = turmaStr.match(/TURMA:\s*(\d+)/);
-    turmaObj.number = turmaMatch ? turmaMatch[1] : null;
+    const classMatch = classStr.match(/TURMA:\s*(\d+)/);
+    classObj.number = classMatch ? classMatch[1] : null;
 
-    const prefMatch = turmaStr.match(/Preferencial:\s*(SIM|NÃO)/);
-    turmaObj.preferential = prefMatch ? prefMatch[1] : null;
+    const prefMatch = classStr.match(/Preferencial:\s*(SIM|NÃO)/);
+    classObj.preferential = prefMatch ? prefMatch[1] : null;
 
-    const temposMatch = turmaStr.match(/Tempos:\s*([A-ZÁÉÍÓÚÃÕÇ0-9\s\w\.\-]+?)(?=Local das Aulas:|Docente:)/);
-    turmaObj.times = temposMatch ? temposMatch[1].trim() : null;
+    const timesMatch = classStr.match(/Tempos:\s*([A-ZÁÉÍÓÚÃÕÇ0-9\s\w\.\-]+?)(?=Local das Aulas:|Docente:)/);
+    classObj.times = timesMatch ? timesMatch[1].trim() : null;
 
-    const docenteMatch = turmaStr.match(/Docente:\s*([A-ZÁÉÍÓÚÃÕÇ\s\w\.\-]+)/i);
-    turmaObj.teacher = docenteMatch ? docenteMatch[1].trim().replace(/ Vagas.*$/, '') : null;
+    const teacherMatch = classStr.match(/Docente:\s*([A-ZÁÉÍÓÚÃÕÇ\s\w\.\-]+)/i);
+    classObj.teacher = teacherMatch ? teacherMatch[1].trim().replace(/ Vagas.*$/, '') : null;
 
-    const vagasMatch = turmaStr.match(/Vagas Atualizadas da Turma.*?UERJ\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)/s);
+    const vagasMatch = classStr.match(/Vagas Atualizadas da Turma.*?UERJ\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)/s);
     if (vagasMatch) {
-        turmaObj.offered_uerj = vagasMatch[1];
-        turmaObj.occupied_uerj = vagasMatch[2];
-        turmaObj.offered_vestibular = vagasMatch[3];
-        turmaObj.occupied_vestibular = vagasMatch[4];
+        classObj.offeredUerj = vagasMatch[1];
+        classObj.occupiedUerj = vagasMatch[2];
+        classObj.offeredVestibular = vagasMatch[3];
+        classObj.occupiedVestibular = vagasMatch[4];
     }
 
-    const solMatch = turmaStr.match(/Vagas para Solicitação de Inscrição.*?UERJ\s*(\d+)\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)\s*(\d+)/s);
+    const solMatch = classStr.match(/Vagas para Solicitação de Inscrição.*?UERJ\s*(\d+)\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)\s*(\d+)/s);
     if (solMatch) {
-        turmaObj.request_uerj_offered = solMatch[1];
-        turmaObj.request_uerj_total = solMatch[2];
-        turmaObj.request_uerj_preferential = solMatch[3];
-        turmaObj.request_vestibular_offered = solMatch[4];
-        turmaObj.request_vestibular_total = solMatch[5];
-        turmaObj.request_vestibular_preferential = solMatch[6];
+        classObj.requestUerjOffered = solMatch[1];
+        classObj.requestUerjTotal = solMatch[2];
+        classObj.requestUerjPreferential = solMatch[3];
+        classObj.requestVestibularOffered = solMatch[4];
+        classObj.requestVestibularTotal = solMatch[5];
+        classObj.requestVestibularPreferential = solMatch[6];
     }
 
-    return turmaObj;
+    return classObj;
 }
 
-async function scrapeDisciplinas(matricula, senha) {
+async function scrapeDisciplines(matricula, senha) {
     const browser = await puppeteer.launch({
         args: chromium.args,
         defaultViewport: chromium.defaultViewport,
@@ -66,7 +66,7 @@ async function scrapeDisciplinas(matricula, senha) {
 
     await page.waitForSelector('tbody');
 
-    const disciplinas = await page.evaluate(() => {
+    const disciplines = await page.evaluate(() => {
         const rows = Array.from(document.querySelectorAll('tbody tr'));
         return rows
             .filter(row => row.querySelectorAll('th').length === 0 && row.querySelectorAll('td').length >= 9)
@@ -85,72 +85,72 @@ async function scrapeDisciplinas(matricula, senha) {
                     type: tds[3].innerText.trim(),
                     ramification: tds[4].innerText.trim(),
                     credits: tds[5].innerText.trim(),
-                    total_hours: tds[6].innerText.trim(),
-                    credit_lock: tds[7].innerText.trim(),
-                    class_in_period: tds[8].innerText.trim(),
-                    discipline_id: id
+                    totalHours: tds[6].innerText.trim(),
+                    creditLock: tds[7].innerText.trim(),
+                    classInPeriod: tds[8].innerText.trim(),
+                    disciplineId: id
                 };
             });
     });
 
-    console.log(`Found ${disciplinas.length} disciplinas.`);
+    console.log(`Found ${disciplines.length} disciplines.`);
 
-    for (const disciplina of disciplinas) {
-        if (!disciplina.discipline_id) continue;
+    for (const discipline of disciplines) {
+        if (!discipline.disciplineId) continue;
 
-        await page.evaluate((id) => { consultarDisciplina(output, id); }, disciplina.discipline_id);
+        await page.evaluate((id) => { consultarDisciplina(output, id); }, discipline.disciplineId);
         await page.waitForSelector('.divContentBlockHeader', { timeout: 8000 });
 
-        const requisitos = await page.evaluate(() => {
-            const bloco = Array.from(document.querySelectorAll('.divContentBlock'))
+        const requirements = await page.evaluate(() => {
+            const block = Array.from(document.querySelectorAll('.divContentBlock'))
                 .find(el => el.querySelector('.divContentBlockHeader')?.innerText.includes('Requisitos da Disciplina'));
-            if (!bloco) return [];
-            const body = bloco.querySelector('.divContentBlockBody');
+            if (!block) return [];
+            const body = block.querySelector('.divContentBlockBody');
             if (!body) return [];
             if (body.innerText.includes('Esta Disciplina não possui requisito para inscrição.')) return [];
 
-            const requisitos = [];
-            const linhas = body.querySelectorAll('div[style*="margin-bottom"]');
-            if (linhas.length > 0) {
-                linhas.forEach(linha => {
-                    const tipo = linha.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
-                    const desc = linha.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || '';
-                    requisitos.push({ tipo, descricao: desc });
+            const requirements = [];
+            const lines = body.querySelectorAll('div[style*="margin-bottom"]');
+            if (lines.length > 0) {
+                lines.forEach(line => {
+                    const type = line.querySelector('b')?.innerText.replace(':', '').trim() || 'Requirement';
+                    const description = line.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || '';
+                    requirements.push({ type, description });
                 });
             } else {
-                const tipo = body.querySelector('b')?.innerText.replace(':', '').trim() || 'Requisito';
-                const desc = body.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || body.innerText.trim();
-                requisitos.push({ tipo, descricao: desc });
+                const type = body.querySelector('b')?.innerText.replace(':', '').trim() || 'Requirement';
+                const description = body.querySelector('b')?.parentElement?.nextElementSibling?.innerText.trim() || body.innerText.trim();
+                requirements.push({ type, description });
             }
-            return requisitos;
+            return requirements;
         });
 
-        disciplina.requisitos = requisitos;
+        discipline.requirements = requirements;
 
-        const turmasRaw = await page.evaluate(() => {
-            const turmas = [];
-            const turmaBlocks = Array.from(document.querySelectorAll('.divContentBlockHeader'))
+        const classesRaw = await page.evaluate(() => {
+            const classes = [];
+            const classBlocks = Array.from(document.querySelectorAll('.divContentBlockHeader'))
                 .filter(el => el.textContent.includes('Turmas da Disciplina') || el.textContent.includes('Turma da Disciplina'));
-            if (turmaBlocks.length === 0) return turmas;
+            if (classBlocks.length === 0) return classes;
 
-            const turmaTable = turmaBlocks[0].parentElement.querySelector('table');
-            if (!turmaTable) return turmas;
+            const classTable = classBlocks[0].parentElement.querySelector('table');
+            if (!classTable) return classes;
 
-            const turmaRows = Array.from(turmaTable.querySelectorAll('tr'));
-            turmaRows.forEach(row => {
-                const turmaTd = row.querySelector('td');
-                if (turmaTd) {
-                    const turmaDiv = turmaTd.querySelector('div');
-                    if (turmaDiv) turmas.push(turmaDiv.innerText.replace(/\s+/g, ' ').trim());
+            const classRows = Array.from(classTable.querySelectorAll('tr'));
+            classRows.forEach(row => {
+                const classTd = row.querySelector('td');
+                if (classTd) {
+                    const classDiv = classTd.querySelector('div');
+                    if (classDiv) classes.push(classDiv.innerText.replace(/\s+/g, ' ').trim());
                 }
             });
-            return turmas;
+            return classes;
         });
-        disciplina.turmas = turmasRaw.map(parseTurma);
+        discipline.classes = classesRaw.map(parseClass);
 
-        console.log(`Extracted ${disciplina.turmas.length} turmas for disciplina ${disciplina.name}`);
+        console.log(`Extracted ${discipline.classes.length} classes for discipline ${discipline.name}`);
 
-        await upsertDisciplinaRefinada(disciplina);
+        await upsertDiscipline(discipline);
 
         await page.goBack({ waitUntil: 'domcontentloaded' });
         await page.waitForSelector('tbody');
@@ -158,7 +158,7 @@ async function scrapeDisciplinas(matricula, senha) {
 
     await browser.close();
 
-    return disciplinas;
+    return disciplines;
 }
 
-export { scrapeDisciplinas };
+export { scrapeDisciplines };
