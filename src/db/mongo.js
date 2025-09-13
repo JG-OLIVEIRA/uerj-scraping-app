@@ -25,10 +25,26 @@ async function upsertDiscipline(discipline) {
         const existing = await disciplinesCollection.findOne({ disciplineId: discipline.disciplineId });
 
         if (existing) {
+            const newClasses = discipline.classes || [];
+            const existingClasses = existing.classes || [];
+
+            // Preserve whatsappGroup links from existing classes
+            if (existingClasses.length > 0) {
+                const existingClassMap = new Map(existingClasses.map(c => [c.number, c]));
+                for (const newClass of newClasses) {
+                    const existingClass = existingClassMap.get(newClass.number);
+                    if (existingClass && existingClass.whatsappGroup) {
+                        newClass.whatsappGroup = existingClass.whatsappGroup;
+                    }
+                }
+            }
+            
+            const updatedDiscipline = { ...discipline, classes: newClasses };
             const updates = {};
-            for (const key in discipline) {
-                if (JSON.stringify(discipline[key]) !== JSON.stringify(existing[key])) {
-                    updates[key] = discipline[key];
+            for (const key in updatedDiscipline) {
+                if (key === '_id') continue; // Do not compare or update the _id field
+                if (JSON.stringify(updatedDiscipline[key]) !== JSON.stringify(existing[key])) {
+                    updates[key] = updatedDiscipline[key];
                 }
             }
 
