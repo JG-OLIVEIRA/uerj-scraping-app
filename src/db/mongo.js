@@ -131,5 +131,18 @@ async function updateStudent({ studentId, add, remove }) {
     }
 }
 
+async function updateWhatsappGroup({ disciplineId, classNumber, whatsappGroup }) {
+    try {
+        const result = await disciplinesCollection.updateOne(
+            { disciplineId: disciplineId, "classes.number": classNumber },
+            { $set: { "classes.$.whatsappGroup": whatsappGroup } }
+        );
+        console.log(`Discipline ${disciplineId}, Class ${classNumber} updated with new WhatsApp group.`);
+        return result;
+    } catch (err) {
+        console.error(`Error updating WhatsApp group: ${err}`);
+        throw err;
+    }
+}
 
-export { initMongo, upsertDiscipline, getAllDisciplines, getDisciplineById, createStudent, getStudentById, updateStudent };
+export { initMongo, upsertDiscipline, getAllDisciplines, getDisciplineById, createStudent, getStudentById, updateStudent, updateWhatsappGroup };

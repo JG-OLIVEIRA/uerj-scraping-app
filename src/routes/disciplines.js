@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllDisciplines, getDisciplineById } from '../db/mongo.js';
+import { getAllDisciplines, getDisciplineById, updateWhatsappGroup } from '../db/mongo.js';
 import { scrapeDisciplines } from '../scraping/scraper.js';
 import 'dotenv/config';
 
@@ -68,6 +68,57 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
     const disciplines = await scrapeDisciplines(process.env.UERJ_MATRICULA, process.env.UERJ_SENHA);
     res.send({ 'Disciplines updated': disciplines });
+});
+
+/**
+ * @swagger
+ * /disciplines/{id}/class/{classNumber}:
+ *   put:
+ *     summary: Adds a WhatsApp group link to a class.
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         description: The ID of the discipline.
+ *         schema:
+ *           type: string
+ *       - in: path
+ *         name: classNumber
+ *         required: true
+ *         description: The number of the class.
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               whatsappGroup:
+ *                 type: string
+ *                 description: The WhatsApp group link.
+ *     responses:
+ *       200:
+ *         description: WhatsApp group updated successfully.
+ *       404:
+ *         description: Discipline or class not found.
+ *       500:
+ *         description: Error updating the WhatsApp group.
+ */
+router.put('/:id/class/:classNumber', async (req, res) => {
+    const { id, classNumber } = req.params;
+    const { whatsappGroup } = req.body;
+
+    try {
+        const result = await updateWhatsappGroup({ disciplineId: id, classNumber, whatsappGroup });
+        if (result.matchedCount === 0) {
+            return res.status(404).send({ error: 'Discipline or class not found' });
+        }
+        res.status(200).send({ message: `WhatsApp group for class ${classNumber} updated successfully` });
+    } catch (error) {
+        res.status(500).send({ error: 'Error updating the WhatsApp group' });
+    }
 });
 
 export default router;

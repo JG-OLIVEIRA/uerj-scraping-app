@@ -77,7 +77,8 @@ const options = {
                         requestUerjPreferential: { type: 'string' },
                         requestVestibularOffered: { type: 'string' },
                         requestVestibularTotal: { type: 'string' },
-                        requestVestibularPreferential: { type: 'string' }
+                        requestVestibularPreferential: { type: 'string' },
+                        whatsappGroup: { type: 'string' }
                     }
                 }
             }
