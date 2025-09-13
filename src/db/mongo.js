@@ -86,11 +86,12 @@ async function getDisciplineById(id) {
     }
 }
 
-async function createStudent({ studentId, disciplines }) {
+async function createStudent({ studentId, completedDisciplines }) {
     try {
         const studentData = {
             studentId,
-            disciplines: disciplines || []
+            completedDisciplines: completedDisciplines || [],
+            currentDisciplines: []
         };
         const result = await studentsCollection.insertOne(studentData);
         console.log(`Student ${studentId} inserted.`);
@@ -117,7 +118,7 @@ async function updateStudent({ studentId, add, remove }) {
             return { matchedCount: 1, modifiedCount: 0 };
         }
 
-        let disciplinesExpr = { $ifNull: ["$disciplines", []] };
+        let disciplinesExpr = { $ifNull: ["$completedDisciplines", []] };
 
         if (add && add.length > 0) {
             disciplinesExpr = { $setUnion: [disciplinesExpr, add] };
@@ -133,7 +134,7 @@ async function updateStudent({ studentId, add, remove }) {
             };
         }
 
-        const updatePipeline = [{ $set: { disciplines: disciplinesExpr } }];
+        const updatePipeline = [{ $set: { completedDisciplines: disciplinesExpr } }];
 
         const result = await studentsCollection.updateOne(
             { studentId: studentId },
@@ -143,6 +144,20 @@ async function updateStudent({ studentId, add, remove }) {
         return result;
     } catch (err) {
         console.error(`Error updating student: ${err}`);
+        throw err;
+    }
+}
+
+async function updateCurrentDisciplines({ studentId, disciplines }) {
+    try {
+        const result = await studentsCollection.updateOne(
+            { studentId: studentId },
+            { $set: { currentDisciplines: disciplines } }
+        );
+        console.log(`Student ${studentId} current disciplines updated.`);
+        return result;
+    } catch (err) {
+        console.error(`Error updating current disciplines: ${err}`);
         throw err;
     }
 }
@@ -161,4 +176,4 @@ async function updateWhatsappGroup({ disciplineId, classNumber, whatsappGroup })
     }
 }
 
-export { initMongo, upsertDiscipline, getAllDisciplines, getDisciplineById, createStudent, getStudentById, updateStudent, updateWhatsappGroup };
+export { initMongo, upsertDiscipline, getAllDisciplines, getDisciplineById, createStudent, getStudentById, updateStudent, updateWhatsappGroup, updateCurrentDisciplines };

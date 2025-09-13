@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllDisciplines, getDisciplineById, updateWhatsappGroup } from '../db/mongo.js';
+import { getAllDisciplines, getDisciplineById, updateWhatsappGroup, getStudentById } from '../db/mongo.js';
 import { scrapeDisciplines } from '../scraping/scraper.js';
 import 'dotenv/config';
 
@@ -10,6 +10,12 @@ const router = express.Router();
  * /disciplines:
  *   get:
  *     summary: Returns all disciplines.
+ *     parameters:
+ *       - in: query
+ *         name: studentId
+ *         schema:
+ *           type: string
+ *         description: The ID of the student to get the status of the disciplines.
  *     responses:
  *       200:
  *         description: A list of all disciplines.
@@ -21,7 +27,25 @@ const router = express.Router();
  *                 $ref: '#/components/schemas/Discipline'
  */
 router.get('/', async (req, res) => {
+    const { studentId } = req.query;
     const disciplines = await getAllDisciplines();
+
+    if (studentId) {
+        const student = await getStudentById(studentId);
+        if (student) {
+            const disciplinesWithStatus = disciplines.map(discipline => {
+                let status = 'not_taken';
+                if (student.completedDisciplines.includes(discipline.disciplineId)) {
+                    status = 'completed';
+                } else if (student.currentDisciplines.includes(discipline.disciplineId)) {
+                    status = 'in_progress';
+                }
+                return { ...discipline, status };
+            });
+            return res.send(disciplinesWithStatus);
+        }
+    }
+
     res.send(disciplines);
 });
 
@@ -37,6 +61,11 @@ router.get('/', async (req, res) => {
  *         description: The ID of the discipline.
  *         schema:
  *           type: string
+ *       - in: query
+ *         name: studentId
+ *         schema:
+ *           type: string
+ *         description: The ID of the student to get the status of the discipline.
  *     responses:
  *       200:
  *         description: The discipline corresponding to the ID.
@@ -48,8 +77,21 @@ router.get('/', async (req, res) => {
  *         description: Discipline not found.
  */
 router.get('/:id', async (req, res) => {
+    const { studentId } = req.query;
     const discipline = await getDisciplineById(req.params.id);
     if (discipline) {
+        if (studentId) {
+            const student = await getStudentById(studentId);
+            if (student) {
+                let status = 'not_taken';
+                if (student.completedDisciplines.includes(discipline.disciplineId)) {
+                    status = 'completed';
+                } else if (student.currentDisciplines.includes(discipline.disciplineId)) {
+                    status = 'in_progress';
+                }
+                return res.send({ ...discipline, status });
+            }
+        }
         res.send(discipline);
     } else {
         res.status(404).send({ error: 'Discipline not found' });

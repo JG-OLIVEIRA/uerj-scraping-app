@@ -17,13 +17,21 @@ const options = {
                             description: "The student's ID.",
                             example: '20201010101'
                         },
-                        disciplines: {
+                        completedDisciplines: {
                             type: 'array',
                             items: {
                                 type: 'string'
                             },
                             description: 'A list of discipline IDs that the student has completed.',
                             example: ['DC001', 'DC002']
+                        },
+                        currentDisciplines: {
+                            type: 'array',
+                            items: {
+                                type: 'string'
+                            },
+                            description: 'A list of discipline IDs that the student is currently taking.',
+                            example: ['DC003', 'DC004']
                         }
                     }
                 },
