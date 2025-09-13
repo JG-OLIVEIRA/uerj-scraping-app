@@ -57,6 +57,8 @@ router.get('/:studentId', async (req, res) => {
  *         description: Student created successfully.
  *       400:
  *         description: The student ID is required.
+ *       409:
+ *         description: A student with the same ID already exists.
  *       500:
  *         description: Error creating the student.
  */
@@ -68,6 +70,11 @@ router.post('/', async (req, res) => {
     }
 
     try {
+        const existingStudent = await getStudentById(studentId);
+        if (existingStudent) {
+            return res.status(409).send({ error: `Student with ID ${studentId} already exists` });
+        }
+
         await createStudent({ studentId, completedDisciplines });
         res.status(201).send({ message: `Student ${studentId} created successfully` });
     } catch (error) {
