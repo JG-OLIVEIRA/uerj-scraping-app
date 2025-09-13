@@ -72,7 +72,11 @@ async function getDisciplineById(id) {
 
 async function createStudent({ studentId, disciplines }) {
     try {
-        const result = await studentsCollection.insertOne({ studentId, disciplines });
+        const studentData = {
+            studentId,
+            disciplines: disciplines || []
+        };
+        const result = await studentsCollection.insertOne(studentData);
         console.log(`Student ${studentId} inserted.`);
         return result;
     } catch (err) {
@@ -92,22 +96,32 @@ async function getStudentById(studentId) {
 
 async function updateStudent({ studentId, add, remove }) {
     try {
-        const update = {};
-        if (add && add.length > 0) {
-            update.$addToSet = { disciplines: { $each: add } };
-        }
-        if (remove && remove.length > 0) {
-            update.$pull = { disciplines: { $in: remove } };
-        }
-
-        if (Object.keys(update).length === 0) {
+        if ((!add || add.length === 0) && (!remove || remove.length === 0)) {
             console.log(`No changes for student ${studentId}`);
             return { matchedCount: 1, modifiedCount: 0 };
         }
 
+        let disciplinesExpr = { $ifNull: ["$disciplines", []] };
+
+        if (add && add.length > 0) {
+            disciplinesExpr = { $setUnion: [disciplinesExpr, add] };
+        }
+
+        if (remove && remove.length > 0) {
+            disciplinesExpr = {
+                $filter: {
+                    input: disciplinesExpr,
+                    as: "discipline",
+                    cond: { $not: { $in: ["$$discipline", remove] } }
+                }
+            };
+        }
+
+        const updatePipeline = [{ $set: { disciplines: disciplinesExpr } }];
+
         const result = await studentsCollection.updateOne(
             { studentId: studentId },
-            update
+            updatePipeline
         );
         console.log(`Student ${studentId} updated.`);
         return result;
