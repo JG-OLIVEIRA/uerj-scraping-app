@@ -3,10 +3,25 @@ import chromium from '@sparticuz/chromium';
 import { upsertDiscipline } from '../db/mongo.js';
 
 function parseClass(classStr) {
-    const classObj = {};
+    const classObj = {
+        number: null,
+        preferential: null,
+        times: null,
+        teacher: null,
+        offeredUerj: 0,
+        occupiedUerj: 0,
+        offeredVestibular: 0,
+        occupiedVestibular: 0,
+        requestUerjOffered: 0,
+        requestUerjTotal: 0,
+        requestUerjPreferential: 0,
+        requestVestibularOffered: 0,
+        requestVestibularTotal: 0,
+        requestVestibularPreferential: 0,
+    };
 
     const classMatch = classStr.match(/TURMA:\s*(\d+)/);
-    classObj.number = classMatch ? classMatch[1] : null;
+    classObj.number = classMatch ? parseInt(classMatch[1], 10) : null;
 
     const prefMatch = classStr.match(/Preferencial:\s*(SIM|NÃO)/);
     classObj.preferential = prefMatch ? prefMatch[1] : null;
@@ -19,20 +34,20 @@ function parseClass(classStr) {
 
     const vagasMatch = classStr.match(/Vagas Atualizadas da Turma.*?UERJ\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)/s);
     if (vagasMatch) {
-        classObj.offeredUerj = vagasMatch[1];
-        classObj.occupiedUerj = vagasMatch[2];
-        classObj.offeredVestibular = vagasMatch[3];
-        classObj.occupiedVestibular = vagasMatch[4];
+        classObj.offeredUerj = parseInt(vagasMatch[1], 10) || 0;
+        classObj.occupiedUerj = parseInt(vagasMatch[2], 10) || 0;
+        classObj.offeredVestibular = parseInt(vagasMatch[3], 10) || 0;
+        classObj.occupiedVestibular = parseInt(vagasMatch[4], 10) || 0;
     }
 
     const solMatch = classStr.match(/Vagas para Solicitação de Inscrição.*?UERJ\s*(\d+)\s*(\d+)\s*(\d+).*?Vestibular\s*(\d+)\s*(\d+)\s*(\d+)/s);
     if (solMatch) {
-        classObj.requestUerjOffered = solMatch[1];
-        classObj.requestUerjTotal = solMatch[2];
-        classObj.requestUerjPreferential = solMatch[3];
-        classObj.requestVestibularOffered = solMatch[4];
-        classObj.requestVestibularTotal = solMatch[5];
-        classObj.requestVestibularPreferential = solMatch[6];
+        classObj.requestUerjOffered = parseInt(solMatch[1], 10) || 0;
+        classObj.requestUerjTotal = parseInt(solMatch[2], 10) || 0;
+        classObj.requestUerjPreferential = parseInt(solMatch[3], 10) || 0;
+        classObj.requestVestibularOffered = parseInt(solMatch[4], 10) || 0;
+        classObj.requestVestibularTotal = parseInt(solMatch[5], 10) || 0;
+        classObj.requestVestibularPreferential = parseInt(solMatch[6], 10) || 0;
     }
 
     return classObj;
@@ -84,8 +99,8 @@ async function scrapeDisciplines(matricula, senha) {
                     attended: tds[2].innerText.trim(),
                     type: tds[3].innerText.trim(),
                     ramification: tds[4].innerText.trim(),
-                    credits: tds[5].innerText.trim(),
-                    totalHours: tds[6].innerText.trim(),
+                    credits: parseInt(tds[5].innerText.trim(), 10) || 0,
+                    totalHours: parseInt(tds[6].innerText.trim(), 10) || 0,
                     creditLock: tds[7].innerText.trim(),
                     classInPeriod: tds[8].innerText.trim(),
                     disciplineId: id

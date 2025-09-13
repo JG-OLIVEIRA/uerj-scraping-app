@@ -118,6 +118,13 @@ async function updateStudent({ studentId, add, remove }) {
             return { matchedCount: 1, modifiedCount: 0 };
         }
 
+        const allDisciplineIds = (add || []).concat(remove || []);
+        const invalidIds = allDisciplineIds.filter(id => typeof id !== 'string' || !/^[\w-]+$/.test(id));
+
+        if (invalidIds.length > 0) {
+            throw new Error(`Invalid discipline IDs: ${invalidIds.join(', ')}`);
+        }
+
         let disciplinesExpr = { $ifNull: ["$completedDisciplines", []] };
 
         if (add && add.length > 0) {
@@ -150,6 +157,11 @@ async function updateStudent({ studentId, add, remove }) {
 
 async function updateCurrentDisciplines({ studentId, disciplines }) {
     try {
+        const invalidIds = disciplines.filter(id => typeof id !== 'string' || !/^[\w-]+$/.test(id));
+        if (invalidIds.length > 0) {
+            throw new Error(`Invalid discipline IDs: ${invalidIds.join(', ')}`);
+        }
+
         const result = await studentsCollection.updateOne(
             { studentId: studentId },
             { $set: { currentDisciplines: disciplines } }
