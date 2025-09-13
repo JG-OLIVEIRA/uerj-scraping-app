@@ -1,5 +1,5 @@
 import express from 'express';
-import { createStudent, getStudentById, updateStudent, updateCurrentDisciplines } from '../db/mongo.js';
+import { createStudent, getStudentById, updateStudent, updateCurrentDisciplines, deleteStudent } from '../db/mongo.js';
 
 const router = express.Router();
 
@@ -167,6 +167,40 @@ router.put('/:studentId/current-disciplines', async (req, res) => {
         res.status(200).send({ message: `Student ${studentId}'s current disciplines updated successfully` });
     } catch (error) {
         res.status(500).send({ error: 'Error updating the student\'s current disciplines' });
+    }
+});
+
+/**
+ * @swagger
+ * /students/{studentId}:
+ *   delete:
+ *     summary: Deletes a student by their ID.
+ *     parameters:
+ *       - in: path
+ *         name: studentId
+ *         required: true
+ *         description: The ID of the student to be deleted.
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Student deleted successfully.
+ *       404:
+ *         description: Student not found.
+ *       500:
+ *         description: Error deleting the student.
+ */
+router.delete('/:studentId', async (req, res) => {
+    const { studentId } = req.params;
+
+    try {
+        const result = await deleteStudent(studentId);
+        if (result.deletedCount === 0) {
+            return res.status(404).send({ error: 'Student not found' });
+        }
+        res.status(200).send({ message: `Student ${studentId} deleted successfully` });
+    } catch (error) {
+        res.status(500).send({ error: 'Error deleting the student' });
     }
 });
 

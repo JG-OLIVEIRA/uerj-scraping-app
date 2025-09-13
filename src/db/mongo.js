@@ -176,4 +176,15 @@ async function updateWhatsappGroup({ disciplineId, classNumber, whatsappGroup })
     }
 }
 
-export { initMongo, upsertDiscipline, getAllDisciplines, getDisciplineById, createStudent, getStudentById, updateStudent, updateWhatsappGroup, updateCurrentDisciplines };
+async function deleteStudent(studentId) {
+    try {
+        const result = await studentsCollection.deleteOne({ studentId: studentId });
+        console.log(`Student ${studentId} deleted.`);
+        return result;
+    } catch (err) {
+        console.error(`Error deleting student: ${err}`);
+        throw err;
+    }
+}
+
+export { initMongo, upsertDiscipline, getAllDisciplines, getDisciplineById, createStudent, getStudentById, updateStudent, updateWhatsappGroup, updateCurrentDisciplines, deleteStudent };
